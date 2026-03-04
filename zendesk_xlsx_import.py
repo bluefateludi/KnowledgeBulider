@@ -21,9 +21,9 @@ def gs(b,e,t,c):return rq(b,e,t,f"/api/v2/help_center/categories/{c}/sections.js
 def cs(b,e,t,c,n,d=""):return rq(b,e,t,f"/api/v2/help_center/categories/{c}/sections.json","POST",{"section":{"name":n,"description":d}})
 def ca(b,e,t,s,ti,bd,pg,us,lc,dr):return rq(b,e,t,f"/api/v2/help_center/sections/{s}/articles.json","POST",{"article":{"title":ti,"body":bd,"permission_group_id":pg,"user_segment_id":us,"locale":lc,"draft":dr}})
 def ua(b,e,t,aid,ti,bd,pg,lc,dr):return rq(b,e,t,f"/api/v2/help_center/articles/{aid}.json","PUT",{"article":{"title":ti,"body":bd,"permission_group_id":pg,"locale":lc,"draft":dr}})
-def ga(b,e,t,s):return rq(b,e,t,f"/api/v2/help_center/sections/{s}/articles.json","GET",None)
+def ga(b,e,t,s,per_page=100):return rq(b,e,t,f"/api/v2/help_center/sections/{s}/articles.json?per_page={per_page}","GET",None)
 def fa(b,e,t,s,ti):
-    x=ga(b,e,t,s)
+    x=ga(b,e,t,s,per_page=100)
     if "_error" in x:return None
     for a in x.get("articles",[]):
         if a.get("name")==ti or a.get("title")==ti:
