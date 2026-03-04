@@ -1,1 +1,4 @@
 .claude/commands/
+config.json
+*.xlsx
+.env

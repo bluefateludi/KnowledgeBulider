@@ -1,0 +1,16 @@
+{
+  "zendesk": {
+    "subdomain": "your-subdomain",
+    "email": "your-email@example.com",
+    "api_token": "your_api_token_here",
+    "base_url": "https://your-subdomain.zendesk.com"
+  },
+  "permission_groups": [
+    {"id": 12345, "name": "管理员", "built_in": true}
+  ],
+  "import_defaults": {
+    "permission_group_id": 12345,
+    "locale": "zh-cn",
+    "draft": true
+  }
+}
