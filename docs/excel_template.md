@@ -2,32 +2,15 @@
 
 ## 快速开始
 
-### 1. 获取 Zendesk 信息
+### 1. 准备 Excel 文件
 
-| 项目 | 如何获取 | 示例 |
-|------|----------|------|
-| subdomain | 你的 Zendesk 登录 URL | `https://abc.zendesk.com` → `abc` |
-| email | 你的登录邮箱 | `name@example.com` |
-| api-token | Zendesk 后台生成 | 见下方步骤 |
+创建一个 `.xlsx` 文件，第一行表头如下（使用固定 Section ID 时）：
 
-#### 获取 API Token：
-1. 登录 Zendesk
-2. 点击左下角「管理」图标
-3. 进入「渠道」→「API」
-4. 点击「添加 Token」
-5. 复制生成的 Token
-
----
-
-### 2. 准备 Excel 文件
-
-创建一个 `.xlsx` 文件，第一行表头如下：
-
-| 类别 | 组别 | 文章标题 | 文章内容 |
-|------|------|----------|----------|
-| 产品指南 | 快速入门 | 如何登录 | 登录步骤如下：1.打开网站... |
-| 产品指南 | 快速入门 | 找回密码 | 忘记密码可以通过... |
-| 常见问题 | 支付问题 | 如何退款 | 退款流程：联系客服... |
+| 文章标题 | 文章内容 |
+|----------|----------|
+| 如何登录 | 登录步骤如下：1.打开网站 2.输入账号密码 3.点击登录 |
+| 找回密码 | 忘记密码可以通过以下步骤找回：1.点击忘记密码... |
+| 如何退款 | 退款流程：联系客服并提供订单信息... |
 
 > **注意**：
 > - 表头可以用中文名，脚本会自动识别
@@ -36,72 +19,82 @@
 
 ---
 
-### 3. 运行导入脚本
+### 2. 运行导入脚本
 
-```bash
-python zendesk_xlsx_import.py \
-  --subdomain 你的子域名 \
-  --email 你的邮箱 \
-  --api-token 你的Token \
-  --xlsx 你的文件.xlsx \
-  --draft true   # 建议先用草稿模式测试
-```
+使用统一的 `import.bat` 脚本：
 
-#### 参数说明：
-
-| 参数 | 必需 | 说明 | 默认值 |
-|------|------|------|--------|
-| `--subdomain` | ✅ | Zendesk 子域名 | - |
-| `--email` | ✅ | 认证邮箱 | - |
-| `--api-token` | ✅ | API Token | - |
-| `--xlsx` | ✅ | Excel 文件路径 | - |
-| `--sheet` | ❌ | 工作表名称 | 第一个表 |
-| `--draft` | ❌ | 是否草稿 | `false` |
-| `--locale` | ❌ | 语言 | `zh-cn` |
-| `--section-id` | ❌ | 直接指定目标 Section ID | 按名称查找 |
-
----
-
-### 3.1 使用固定 Section ID（推荐）
-
-如果要将所有文章导入到指定的 section，可以使用 `--section-id` 参数：
-
-```bash
-python zendesk_xlsx_import.py \
-  --subdomain pdi-siebre \
-  --email ethan.qi@almt.com.cn \
-  --api-token YOUR_TOKEN \
-  --xlsx articles.xlsx \
-  --section-id 15351905195407 \
-  --draft true
-```
-
-**使用固定 Section ID 时，Excel 只需要两列：**
-
-| 文章标题 | 文章内容 |
-|----------|----------|
-| 如何登录 | 登录步骤如下... |
-| 找回密码 | 忘记密码可以通过... |
-
-**快捷方式**：使用提供的批处理文件
 ```cmd
-run_import_fixed.bat articles.xlsx
+import.bat articles.xlsx
+```
+
+#### 命令选项
+
+| 选项 | 效果 |
+|------|------|
+| 无选项 | 原始内容 + 跳过已存在 + 草稿 |
+| `--ai` | 使用阿里百炼 AI 重写内容 |
+| `--update` | 更新已存在的文章（默认跳过） |
+| `--publish` | 直接发布（默认为草稿） |
+
+#### 常用组合
+
+```cmd
+# 基础导入（原始内容，草稿，跳过已存在）
+import.bat articles.xlsx
+
+# AI 重写后导入（草稿，跳过已存在）
+import.bat articles.xlsx --ai
+
+# AI 重写并更新已存在的文章（草稿）
+import.bat articles.xlsx --ai --update
+
+# AI 重写、更新并直接发布
+import.bat articles.xlsx --ai --update --publish
 ```
 
 ---
 
-### 4. 检查结果
+### 3. 检查结果
 
-脚本会逐行输出处理结果：
+脚本会显示当前配置并逐行输出处理结果：
 
-```json
-{"row": 1, "status": "ok", "article_id": 12345, "html_url": "...", "title": "如何登录"}
-{"row": 2, "status": "ok", "article_id": 12346, "html_url": "...", "title": "找回密码"}
-{"row": 3, "status": "fail", "reason": "...", "title": "..."}
+```
+========================================
+  Zendesk 知识库导入工具
+========================================
+  文件: articles.xlsx
+  Section: 15353931621391
+  AI: 是 (使用阿里百炼重写)
+  模式: 跳过 (保留已存在的文章)
+  状态: 草稿
+========================================
+
+正在导入...
+
+{"row": 1, "status": "ok", "action": "created", "article_id": 12345, "html_url": "...", "title": "如何登录"}
+{"row": 2, "status": "skip", "reason": "文章已存在", "article_id": 12346, "title": "找回密码"}
+{"row": 3, "status": "ok", "action": "updated", "article_id": 12347, "title": "如何退款"}
 ```
 
-- `status: ok` = 成功创建
-- `status: fail` = 创建失败，检查 reason
+- `action: created` = 新建文章
+- `action: updated` = 更新文章
+- `status: skip` = 跳过（文章已存在）
+- `status: fail` = 失败，检查原因
+
+---
+
+## 当前配置
+
+| 配置项 | 值 |
+|--------|-----|
+| **Subdomain** | `pdi-siebre` |
+| **Brand ID** | `15332878018319` (新子品牌) |
+| **Section ID** | `15353931621391` (常见问题) |
+| **Category ID** | `15353853519119` (测试知识库) |
+| **Permission Group** | `4467696108175` (管理员) |
+| **Locale** | `zh-cn` |
+
+查看文章地址：https://support.siebre.net/hc/zh-cn/sections/15353931621391
 
 ---
 
@@ -110,21 +103,27 @@ run_import_fixed.bat articles.xlsx
 1. 打开目标网页
 2. 复制内容到 Excel
 3. 清洗格式（去除多余空格、换行）
-4. 填写类别、组别、标题
+4. 填写标题
 5. 保存运行
 
 ---
 
 ## 常见问题
 
-**Q: 分类/组别会自动创建吗？**
-A: 是的，如果指定的类别或组别不存在，脚本会自动创建。
+**Q: 如何修改 Section ID？**
+A: 编辑 `import.bat` 文件，修改 `set SECTION_ID=...` 这一行。
 
-**Q: 如何修改已发布的文章？**
-A: 脚本目前只支持创建，不支持更新。修改需要在 Zendesk 后台手动操作。
+**Q: 分类/组别会自动创建吗？**
+A: 使用固定 Section ID 时不需要分类/组别。如果不指定 Section ID，脚本会自动创建。
 
 **Q: 可以批量导入图片吗？**
 A: 当前版本不支持，图片需要手动上传到 Zendesk 后在文章中插入。
 
+**Q: AI 重写失败会怎样？**
+A: 会自动回退到使用原始内容，不会中断导入。
+
 **Q: API 调用频率限制？**
-A: Zendesk 限制约 200 次/分钟，建议分批处理。
+A: Zendesk 限制约 200 次/分钟，建议分批处理大量文章。
+
+**Q: 如何更新已发布的文章？**
+A: 使用 `--update` 参数，脚本会按标题匹配并更新已存在的文章。
