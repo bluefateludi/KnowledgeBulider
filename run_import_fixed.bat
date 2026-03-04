@@ -6,6 +6,7 @@ set SUBDOMAIN=pdi-siebre
 set EMAIL=ethan.qi@almt.com.cn
 set API_TOKEN=9Jwt6Rdty4SKZRGgtOsaolRUKkb9XaD9X72abfPS
 set SECTION_ID=15351905195407
+set PERMISSION_GROUP_ID=4467696108175
 
 if "%1"=="" (
     echo 用法: run_import_fixed.bat excel_file.xlsx
@@ -22,6 +23,7 @@ python zendesk_xlsx_import.py ^
   --api-token %API_TOKEN% ^
   --xlsx %1 ^
   --section-id %SECTION_ID% ^
+  --permission-group-id %PERMISSION_GROUP_ID% ^
   --draft true
 
 echo.
