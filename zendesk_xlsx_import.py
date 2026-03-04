@@ -44,7 +44,7 @@ def esid(b,e,t,c,n):
             if s.get("name")==n:return s.get("id")
         return None
     return y.get("section",{}).get("id")
-def read_xlsx(path,sheet=None):
+def read_xlsx(path,sheet=None,require_category_section=True):
     import openpyxl
     wb=openpyxl.load_workbook(path,read_only=True,data_only=True)
     ws=wb[sheet] if sheet and sheet in wb.sheetnames else wb[wb.sheetnames[0]]
@@ -59,8 +59,10 @@ def read_xlsx(path,sheet=None):
     si=idx(["组别","Section","分组"])
     ti=idx(["文章标题","Title"])
     bi=idx(["文章内容","Body","内容"])
-    if min(ci,si,ti,bi)<0: 
-        raise RuntimeError("表头需包含: 类别, 组别, 文章标题, 文章内容")
+    if min(ti,bi)<0:
+        raise RuntimeError("表头需包含: 文章标题, 文章内容")
+    if require_category_section and min(ci,si)<0:
+        raise RuntimeError("表头需包含: 类别, 组别")
     out=[]
     for row in rows[1:]:
         if row is None: continue
@@ -80,24 +82,30 @@ def main():
     p.add_argument("--locale",default="zh-cn")
     p.add_argument("--draft",choices=["true","false"],default="false")
     p.add_argument("--user-segment-id",default="null")
+    p.add_argument("--section-id",type=int,help="直接指定目标 section ID，跳过类别/组别查找")
     args=p.parse_args()
     base=f"https://{args.subdomain}.zendesk.com"
     dr=True if args.draft.lower()=="true" else False
     us=None if args.user_segment_id=="null" else int(args.user_segment_id)
-    rows=read_xlsx(args.xlsx,args.sheet)
+    rows=read_xlsx(args.xlsx,args.sheet,require_category_section=(args.section_id is None))
+    target_sid=args.section_id
     for i,(cat,sec,title,body) in enumerate(rows,1):
-        if not cat or not sec:
-            print(json.dumps({"row":i,"status":"skip","reason":"缺少分类或组别"},ensure_ascii=False))
-            continue
-        if "<" not in body: body=f"<p>{body}</p>"
-        cid=ecid(base,args.email,args.api_token,cat)
-        if not cid:
-            print(json.dumps({"row":i,"status":"fail","reason":"分类失败","cat":cat},ensure_ascii=False))
-            continue
-        sid=esid(base,args.email,args.api_token,cid,sec)
-        if not sid:
-            print(json.dumps({"row":i,"status":"fail","reason":"组别失败","section":sec},ensure_ascii=False))
-            continue
+        if target_sid is None:
+            if not cat or not sec:
+                print(json.dumps({"row":i,"status":"skip","reason":"缺少分类或组别"},ensure_ascii=False))
+                continue
+            if "<" not in body: body=f"<p>{body}</p>"
+            cid=ecid(base,args.email,args.api_token,cat)
+            if not cid:
+                print(json.dumps({"row":i,"status":"fail","reason":"分类失败","cat":cat},ensure_ascii=False))
+                continue
+            sid=esid(base,args.email,args.api_token,cid,sec)
+            if not sid:
+                print(json.dumps({"row":i,"status":"fail","reason":"组别失败","section":sec},ensure_ascii=False))
+                continue
+        else:
+            sid=target_sid
+            if "<" not in body: body=f"<p>{body}</p>"
         created=ca(base,args.email,args.api_token,sid,title,body,args.permission_group_id,us,args.locale,dr)
         if "_error" in created:
             print(json.dumps({"row":i,"status":"fail","reason":created},ensure_ascii=False))

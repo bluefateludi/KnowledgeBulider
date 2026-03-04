@@ -58,6 +58,35 @@ python zendesk_xlsx_import.py \
 | `--sheet` | ❌ | 工作表名称 | 第一个表 |
 | `--draft` | ❌ | 是否草稿 | `false` |
 | `--locale` | ❌ | 语言 | `zh-cn` |
+| `--section-id` | ❌ | 直接指定目标 Section ID | 按名称查找 |
+
+---
+
+### 3.1 使用固定 Section ID（推荐）
+
+如果要将所有文章导入到指定的 section，可以使用 `--section-id` 参数：
+
+```bash
+python zendesk_xlsx_import.py \
+  --subdomain pdi-siebre \
+  --email ethan.qi@almt.com.cn \
+  --api-token YOUR_TOKEN \
+  --xlsx articles.xlsx \
+  --section-id 15351905195407 \
+  --draft true
+```
+
+**使用固定 Section ID 时，Excel 只需要两列：**
+
+| 文章标题 | 文章内容 |
+|----------|----------|
+| 如何登录 | 登录步骤如下... |
+| 找回密码 | 忘记密码可以通过... |
+
+**快捷方式**：使用提供的批处理文件
+```cmd
+run_import_fixed.bat articles.xlsx
+```
 
 ---
 
