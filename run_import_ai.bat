@@ -1,6 +1,6 @@
 @echo off
-REM Zendesk 知识库导入脚本 (固定 Section ID)
-REM 使用方法: run_import_fixed.bat your_excel_file.xlsx
+REM Zendesk 知识库导入脚本 (AI 重写版本)
+REM 使用方法: run_import_ai.bat your_excel_file.xlsx
 
 set SUBDOMAIN=pdi-siebre
 set EMAIL=ethan.qi@almt.com.cn
@@ -9,13 +9,17 @@ set SECTION_ID=15351905195407
 set PERMISSION_GROUP_ID=4467696108175
 
 if "%1"=="" (
-    echo 用法: run_import_fixed.bat excel_file.xlsx
-    echo 示例: run_import_fixed.bat articles.xlsx
+    echo 用法: run_import_ai.bat excel_file.xlsx
+    echo 示例: run_import_ai.bat articles.xlsx
     echo.
     echo 目标 Section ID: %SECTION_ID% (section1)
+    echo 功能: AI 重写 + 跳过已存在
     pause
     exit /b 1
 )
+
+echo 正在使用阿里百炼 AI 重写文章内容...
+echo.
 
 python zendesk_xlsx_import.py ^
   --subdomain %SUBDOMAIN% ^
@@ -25,6 +29,7 @@ python zendesk_xlsx_import.py ^
   --section-id %SECTION_ID% ^
   --permission-group-id %PERMISSION_GROUP_ID% ^
   --skip-existing ^
+  --ai-rewrite ^
   --draft true
 
 echo.

@@ -20,6 +20,41 @@ def cc(b,e,t,n,d=""):return rq(b,e,t,"/api/v2/help_center/categories.json","POST
 def gs(b,e,t,c):return rq(b,e,t,f"/api/v2/help_center/categories/{c}/sections.json","GET",None)
 def cs(b,e,t,c,n,d=""):return rq(b,e,t,f"/api/v2/help_center/categories/{c}/sections.json","POST",{"section":{"name":n,"description":d}})
 def ca(b,e,t,s,ti,bd,pg,us,lc,dr):return rq(b,e,t,f"/api/v2/help_center/sections/{s}/articles.json","POST",{"article":{"title":ti,"body":bd,"permission_group_id":pg,"user_segment_id":us,"locale":lc,"draft":dr}})
+def ua(b,e,t,aid,ti,bd,pg,lc,dr):return rq(b,e,t,f"/api/v2/help_center/articles/{aid}.json","PUT",{"article":{"title":ti,"body":bd,"permission_group_id":pg,"locale":lc,"draft":dr}})
+def ga(b,e,t,s):return rq(b,e,t,f"/api/v2/help_center/sections/{s}/articles.json","GET",None)
+def fa(b,e,t,s,ti):
+    x=ga(b,e,t,s)
+    if "_error" in x:return None
+    for a in x.get("articles",[]):
+        if a.get("name")==ti or a.get("title")==ti:
+            return a.get("id")
+    return None
+def ar(api_key,title,body):
+    import requests
+    url="https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation"
+    headers={"Authorization":f"Bearer {api_key}","Content-Type":"application/json"}
+    prompt=f"""你是一个知识库文章编辑专家。将用户输入的内容改写为结构清晰、格式良好的知识库文章。
+
+要求：
+1. 使用HTML格式，包含h2标题、ul/li列表等
+2. 保持专业但易懂的语气
+3. 添加适当的强调和格式
+4. 如果内容有步骤，用带strong的列表项呈现
+5. 不要输出除了HTML内容以外的任何文字
+
+文章标题：{title}
+
+文章内容：
+{body}"""
+    data={"model":"qwen-turbo","input":{"messages":[{"role":"user","content":prompt}]}}
+    try:
+        r=requests.post(url,headers=headers,json=data,timeout=30)
+        result=r.json()
+        if "output" in result:
+            return result["output"]["text"]
+        return None
+    except Exception as e:
+        return None
 def ecid(b,e,t,n):
     x=gc(b,e,t)
     if "_error" not in x:
@@ -83,7 +118,19 @@ def main():
     p.add_argument("--draft",choices=["true","false"],default="false")
     p.add_argument("--user-segment-id",default="null")
     p.add_argument("--section-id",type=int,help="直接指定目标 section ID，跳过类别/组别查找")
+    p.add_argument("--skip-existing",action="store_true",help="跳过已存在的文章（按标题匹配）")
+    p.add_argument("--update-existing",action="store_true",help="更新已存在的文章（与 --skip-existing 互斥）")
+    p.add_argument("--ai-rewrite",action="store_true",help="使用阿里百炼 AI 重写文章内容")
+    p.add_argument("--ai-api-key",help="阿里百炼 API Key (默认从 config.json 读取)")
     args=p.parse_args()
+    # 加载配置文件获取 API Key
+    ai_api_key=args.ai_api_key
+    if args.ai_rewrite and not ai_api_key:
+        try:
+            with open("config.json","r",encoding="utf-8") as f:
+                cfg=json.load(f)
+                ai_api_key=cfg.get("ali_bailian",{}).get("api_key")
+        except:pass
     base=f"https://{args.subdomain}.zendesk.com"
     dr=True if args.draft.lower()=="true" else False
     us=None if args.user_segment_id=="null" else int(args.user_segment_id)
@@ -106,11 +153,34 @@ def main():
         else:
             sid=target_sid
             if "<" not in body: body=f"<p>{body}</p>"
-        created=ca(base,args.email,args.api_token,sid,title,body,args.permission_group_id,us,args.locale,dr)
-        if "_error" in created:
-            print(json.dumps({"row":i,"status":"fail","reason":created},ensure_ascii=False))
+            # AI 重写
+            if args.ai_rewrite and ai_api_key:
+                print(json.dumps({"row":i,"status":"ai_rewriting","title":title},ensure_ascii=False))
+                new_body=ar(ai_api_key,title,body)
+                if new_body:
+                    body=new_body
+                else:
+                    print(json.dumps({"row":i,"status":"ai_rewrite_failed","using_original":True},ensure_ascii=False))
+            if args.skip_existing:
+                existing_id=fa(base,args.email,args.api_token,sid,title)
+                if existing_id:
+                    print(json.dumps({"row":i,"status":"skip","reason":"文章已存在","article_id":existing_id,"title":title},ensure_ascii=False))
+                    continue
+            # 检查是否需要更新已存在的文章
+            update_id=None
+            if args.update_existing:
+                update_id=fa(base,args.email,args.api_token,sid,title)
+        # 创建或更新文章
+        if update_id:
+            result=ua(base,args.email,args.api_token,update_id,title,body,args.permission_group_id,args.locale,dr)
+            action="updated"
+        else:
+            result=ca(base,args.email,args.api_token,sid,title,body,args.permission_group_id,us,args.locale,dr)
+            action="created"
+        if "_error" in result:
+            print(json.dumps({"row":i,"status":"fail","reason":result},ensure_ascii=False))
             continue
-        art=created.get("article",{})
-        print(json.dumps({"row":i,"status":"ok","article_id":art.get("id"),"html_url":art.get("html_url"),"title":title},ensure_ascii=False))
+        art=result.get("article",{})
+        print(json.dumps({"row":i,"status":"ok","action":action,"article_id":art.get("id"),"html_url":art.get("html_url"),"title":title},ensure_ascii=False))
 if __name__=="__main__": 
     main()
