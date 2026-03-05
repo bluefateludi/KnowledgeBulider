@@ -15,7 +15,7 @@ REM   import.bat articles.xlsx --ai --update   # AI 重写并更新已存在
 set SUBDOMAIN=pdi-siebre
 set EMAIL=ethan.qi@almt.com.cn
 set API_TOKEN=9Jwt6Rdty4SKZRGgtOsaolRUKkb9XaD9X72abfPS
-set SECTION_ID=15353931621391
+set SECTION_ID=15363363808911
 set PERMISSION_GROUP_ID=4467696108175
 
 if "%1"=="" (
